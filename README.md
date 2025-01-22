@@ -31,5 +31,10 @@ The MD-01 is a powerful rotor controller for antenna systems, supporting azimuth
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/spid-md01-multimode-python.git
-   cd spid-md01-multimode-python
+   git clone https://github.com/yourusername/SPID-MD-01-Python-Controller.git
+   cd SPID-MD-01-Python-Controller
+   ```
+
+## References
+- For more information on the SPID Rot1Prog and Rot2Prog Protocol, visit [this blog post](https://ryeng.name/blog/3).
+- This repository is inspired by and references the work done in [this repo](https://github.com/jaidenfe/rot2proG/tree/master).
