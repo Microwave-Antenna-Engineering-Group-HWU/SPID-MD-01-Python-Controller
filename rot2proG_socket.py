@@ -1,6 +1,6 @@
 '''
-File: 	rot2proG.py
-Author: Jaiden Ferraccioli
+File: 	rot2proG_socket.py
+Authors: Jaiden Ferraccioli and Spyros Daskalakis
 Brief: 	This class is a control interface for the SPID Elektronik rot2proG antenna rotor controller.
 	This software was designed as an open source interface between the rotor controller and
 	other systems. This can be paired with an orbit propagator in order to extend usability and
