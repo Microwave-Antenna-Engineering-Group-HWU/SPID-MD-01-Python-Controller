@@ -35,6 +35,17 @@ The MD-01 is a powerful rotor controller for antenna systems, supporting azimuth
    cd SPID-MD-01-Python-Controller
    ```
 
+## Python Files
+- `rot2proG_serial_v2.py`: Control interface for the SPID Elektronik rot2proG antenna rotor controller.
+- `rot2proG_serial_v3_gui.py`: Enhanced control interface with additional functionalities.
+- `rot2proG_serial_v4.py`: Latest control interface with debugging capabilities.
+- `pyQT5_gui.py`: PyQt5-based GUI for controlling the SPID Elektronik rot2proG antenna rotor controller.
+
+## GUI Implementation
+The GUI was implemented using PyQt5 and is based on the files `rot2proG_serial_v4.py` and `pyQT5_gui.py`. Below is a screenshot of the GUI:
+
+![GUI Screenshot](gui.png)
+
 ## References
 - For more information on the SPID Rot1Prog and Rot2Prog Protocol, visit [this blog post](https://ryeng.name/blog/3).
 - This repository is inspired by and references the work done in [this repo](https://github.com/jaidenfe/rot2proG/tree/master).

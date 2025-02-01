@@ -1,2 +1,3 @@
 pyserial
 windows-curses
+PyQt5
