@@ -44,7 +44,9 @@ The MD-01 is a powerful rotor controller for antenna systems, supporting azimuth
 ## GUI Implementation
 The GUI was implemented using PyQt5 and is based on the files `rot2proG_serial_v4.py` and `pyQT5_gui.py`. Below is a screenshot of the GUI:
 
-![GUI Screenshot](./gui.png)
+<p align="center">
+  < src="https://github.com/daskals/SPID-MD-01-Python-Controller/blob/main/gui.PNG">
+</p>
 
 ## References
 - For more information on the SPID Rot1Prog and Rot2Prog Protocol, visit [this blog post](https://ryeng.name/blog/3).
