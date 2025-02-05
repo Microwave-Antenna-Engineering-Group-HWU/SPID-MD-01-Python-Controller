@@ -8,6 +8,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 import sys
 import serial.tools.list_ports
 from rot2proG_serial_v4 import Rot2proG
+import threading
 
 class GuiApp(QtWidgets.QWidget):
 	def __init__(self, rot2prog):
@@ -183,7 +184,7 @@ class GuiApp(QtWidgets.QWidget):
 		if self.connected:
 			self.disconnect()
 		else:
-			self.connect()
+			threading.Thread(target=self.connect).start()
 
 	def connect(self):
 		com_port = self.com_port_input.currentText()
@@ -313,6 +314,8 @@ class GuiApp(QtWidgets.QWidget):
 
 	def append_message(self, message):
 		self.messages_text.append(message)
+		self.messages_text.verticalScrollBar().setValue(self.messages_text.verticalScrollBar().maximum())
+
 
 	def closeEvent(self, event):
 		if self.connected:

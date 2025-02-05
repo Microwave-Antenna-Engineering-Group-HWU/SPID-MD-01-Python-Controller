@@ -1,3 +1,4 @@
 pyserial
 windows-curses
 PyQt5
+PyInstaller
