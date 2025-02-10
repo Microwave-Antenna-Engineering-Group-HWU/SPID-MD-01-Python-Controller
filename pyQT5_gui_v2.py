@@ -19,12 +19,23 @@ class GuiApp(QtWidgets.QWidget):
 		self.timer = QtCore.QTimer()
 		self.timer.timeout.connect(self.update_status)
 		self.connected = False
+		self.mutex = QtCore.QMutex()  # Mutex for thread safety
 
 	def initUI(self):
 		self.setWindowTitle('Positioner Control 1')
-		self.setFixedSize(500, 900)  # Increased height to 850
-		# self.setStyleSheet("background-color: E9E5DB;")  # Set background color
-
+		
+		# Make window responsive
+		self.setMinimumSize(500, 1000)
+		self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+		
+		# Get screen resolution and set initial window size to half the screen
+		screen = QtWidgets.QApplication.primaryScreen()
+		screen_size = screen.size()
+		print(f"Screen resolution: {screen_size.width()}x{screen_size.height()}")
+		width = screen_size.width() * 0.5  # 50% of screen width
+		height = screen_size.height() * 0.5  # 50% of screen height
+		self.resize(width, height)
+		
 		layout = QtWidgets.QVBoxLayout()
 
 		# Add logo
@@ -126,6 +137,17 @@ class GuiApp(QtWidgets.QWidget):
 		manual_group.setLayout(manual_layout)
 		layout.addWidget(manual_group)
 
+		# Add emergency stop button
+		emergency_group = QtWidgets.QGroupBox("Emergency Stop")
+		emergency_group.setStyleSheet("QGroupBox { font-weight: bold; color: red; }")
+		emergency_layout = QtWidgets.QVBoxLayout()
+		self.emergency_button = QtWidgets.QPushButton('Emergency Stop', self)
+		self.emergency_button.setStyleSheet("background-color: red; color: white; font-size: 16px;")
+		self.emergency_button.clicked.connect(self.stop)
+		emergency_layout.addWidget(self.emergency_button)
+		emergency_group.setLayout(emergency_layout)
+		layout.addWidget(emergency_group)
+
 		# Add status labels
 		status_group = QtWidgets.QGroupBox("Status")
 		status_group.setStyleSheet("QGroupBox { font-weight: bold; color: red; }")
@@ -144,7 +166,6 @@ class GuiApp(QtWidgets.QWidget):
 		self.resolution_label.setAlignment(QtCore.Qt.AlignCenter)
 		self.resolution_label.setStyleSheet("font-size: 14px;")
 		status_layout.addWidget(self.resolution_label)
-
 
 		status_group.setLayout(status_layout)
 		layout.addWidget(status_group)
@@ -174,23 +195,27 @@ class GuiApp(QtWidgets.QWidget):
 		layout.addWidget(self.group_label)
 
 		self.setLayout(layout)
-		self.show()
+		self.show()  # Show the window
 
 	def get_available_com_ports(self):
+		# Get list of available COM ports
 		ports = serial.tools.list_ports.comports()
 		return [port.device for port in ports]
 
 	def toggle_connection(self):
+		# Toggle connection state
 		if self.connected:
 			self.disconnect()
 		else:
 			threading.Thread(target=self.connect).start()
 
 	def connect(self):
+		# Connect to the device
 		com_port = self.com_port_input.currentText()
 		baud_rate = self.baud_rate_input.currentText()
 		self.append_message(f"Connecting to {com_port} at {baud_rate} baud")
 		try:
+			self.mutex.lock()
 			self.rot2prog = Rot2proG(com_port, debugging=True)
 			self.rot2prog.ser.baudrate = int(baud_rate)
 			self.timer.start(self.update_interval * 1000)
@@ -200,16 +225,25 @@ class GuiApp(QtWidgets.QWidget):
 			self.update_status()  # Run status command after connecting
 		except Exception as e:
 			self.append_message(f"Failed to connect: {e}")
+		finally:
+			self.mutex.unlock()
 
 	def disconnect(self):
+		# Disconnect from the device
 		self.append_message("Disconnecting")
-		self.timer.stop()
-		self.rot2prog.__del__()
-		self.connect_button.setText('Connect')
-		self.connected = False
-		self.append_message("Disconnected successfully")
+		self.mutex.lock()
+		try:
+			self.timer.stop()
+			self.rot2prog.__del__()
+			self.connect_button.setText('Connect')
+			self.connected = False
+			self.append_message("Disconnected successfully")
+		finally:
+			self.mutex.unlock()
 
 	def update_status(self):
+		# Update status labels
+		self.mutex.lock()
 		try:
 			status = self.rot2prog.status()
 			self.azimuth_label.setText(f'Azimuth: {status[0]}')
@@ -217,8 +251,11 @@ class GuiApp(QtWidgets.QWidget):
 			self.resolution_label.setText(f'Resolution: {status[2]} pulses/degree')
 		except Exception as e:
 			self.append_message(f"Failed to update status: {e}")
+		finally:
+			self.mutex.unlock()
 
 	def set_update_interval(self):
+		# Set the update interval for status updates
 		if not self.connected:
 			self.append_message("Error: Not connected")
 			return
@@ -234,95 +271,144 @@ class GuiApp(QtWidgets.QWidget):
 			self.append_message("Invalid update interval")
 
 	def set_values(self):
+		# Set azimuth and elevation values
 		if not self.connected:
 			self.append_message("Error: Not connected")
 			return
+		self.mutex.lock()
 		try:
 			azimuth = float(self.azimuth_input.text())
 			elevation = float(self.elevation_input.text())
-			if -180 <= azimuth <= 360 and 0 <= elevation <= 180:
-				self.rot2prog.set(azimuth, elevation)
-				self.append_message(f"Set values: Azimuth = {azimuth}, Elevation = {elevation}")
-			else:
-				self.append_message("Azimuth must be between -180 and 360 degrees, Elevation must be between 0 and 180 degrees")
+			if not (-180 <= azimuth <= 540):
+				self.append_message(f"Error: Azimuth value {azimuth} out of limits. Must be between -180 and 540.")
+				return
+			if not (-21 <= elevation <= 180):
+				self.append_message(f"Error: Elevation value {elevation} out of limits. Must be between -21 and 180.")
+				return
+			self.rot2prog.set(azimuth, elevation)
+			self.append_message(f"Set values: Azimuth = {azimuth}, Elevation = {elevation}")
 		except ValueError:
 			self.append_message("Invalid azimuth or elevation value")
+		finally:
+			self.mutex.unlock()
 
 	def move_up(self):
+		# Move up by step value
 		if not self.connected:
 			self.append_message("Error: Not connected")
 			return
+		self.mutex.lock()
 		try:
 			step = float(self.step_input.text())
 			if step > 0:
 				current_elevation = float(self.elevation_label.text().split(': ')[1])
 				new_elevation = current_elevation + step
+				if new_elevation > 180:
+					self.append_message(f"Error: Elevation value {new_elevation} out of limits. Must be between -21 and 180.")
+					return
 				self.rot2prog.set(float(self.azimuth_label.text().split(': ')[1]), new_elevation)
 				self.append_message(f"Moved up by {step} degrees")
 			else:
 				self.append_message("Step must be a positive value")
 		except ValueError:
 			self.append_message("Invalid step value")
+		finally:
+			self.mutex.unlock()
 
 	def move_down(self):
+		# Move down by step value
 		if not self.connected:
 			self.append_message("Error: Not connected")
 			return
+		self.mutex.lock()
 		try:
 			step = float(self.step_input.text())
 			if step > 0:
 				current_elevation = float(self.elevation_label.text().split(': ')[1])
 				new_elevation = current_elevation - step
+				if new_elevation < -21:
+					self.append_message(f"Error: Elevation value {new_elevation} out of limits. Must be between -21 and 180.")
+					return
 				self.rot2prog.set(float(self.azimuth_label.text().split(': ')[1]), new_elevation)
 				self.append_message(f"Moved down by {step} degrees")
 			else:
 				self.append_message("Step must be a positive value")
 		except ValueError:
 			self.append_message("Invalid step value")
+		finally:
+			self.mutex.unlock()
 
 	def move_left(self):
+		# Move left by step value
 		if not self.connected:
 			self.append_message("Error: Not connected")
 			return
+		self.mutex.lock()
 		try:
 			step = float(self.step_input.text())
 			if step > 0:
 				current_azimuth = float(self.azimuth_label.text().split(': ')[1])
 				new_azimuth = current_azimuth - step
+				if new_azimuth < -180:
+					self.append_message(f"Error: Azimuth value {new_azimuth} out of limits. Must be between -180 and 540.")
+					return
 				self.rot2prog.set(new_azimuth, float(self.elevation_label.text().split(': ')[1]))
 				self.append_message(f"Moved left by {step} degrees")
 			else:
 				self.append_message("Step must be a positive value")
 		except ValueError:
 			self.append_message("Invalid step value")
+		finally:
+			self.mutex.unlock()
 
 	def move_right(self):
+		# Move right by step value
 		if not self.connected:
 			self.append_message("Error: Not connected")
 			return
+		self.mutex.lock()
 		try:
 			step = float(self.step_input.text())
 			if step > 0:
 				current_azimuth = float(self.azimuth_label.text().split(': ')[1])
 				new_azimuth = current_azimuth + step
+				if new_azimuth > 540:
+					self.append_message(f"Error: Azimuth value {new_azimuth} out of limits. Must be between -180 and 540.")
+					return
 				self.rot2prog.set(new_azimuth, float(self.elevation_label.text().split(': ')[1]))
 				self.append_message(f"Moved right by {step} degrees")
 			else:
 				self.append_message("Step must be a positive value")
 		except ValueError:
 			self.append_message("Invalid step value")
+		finally:
+			self.mutex.unlock()
+
+	def stop(self):
+		# Emergency stop
+		if self.connected:
+			self.mutex.lock()
+			try:
+				self.append_message("Emergency stop activated")
+				self.rot2prog.stop()
+			finally:
+				self.mutex.unlock()
+		else:
+			self.append_message("Error: Not connected")
 
 	def append_message(self, message):
+		# Append message to the messages box
 		self.messages_text.append(message)
 		self.messages_text.verticalScrollBar().setValue(self.messages_text.verticalScrollBar().maximum())
 
-
 	def closeEvent(self, event):
+		# Handle window close event
 		if self.connected:
 			self.disconnect()
 		event.accept()
 
 def run_gui():
+	# Run the GUI application
 	app = QtWidgets.QApplication(sys.argv)
 	gui = GuiApp(None)
 	sys.exit(app.exec_())
