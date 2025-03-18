@@ -49,3 +49,6 @@ The GUI was implemented using PyQt5 and is based on the files `rot2proG_serial_v
 ## References
 - For more information on the SPID Rot1Prog and Rot2Prog Protocol, visit [this blog post](https://ryeng.name/blog/3).
 - This repository is inspired by and references the work done in [this repo](https://github.com/jaidenfe/rot2proG/tree/master).
+
+## Note for use on Linux
+In the requirements file windows-curses is listed as a dependency. This may be omitted when using a system the default [curses python-module](https://docs.python.org/3/library/curses.html) covers.
