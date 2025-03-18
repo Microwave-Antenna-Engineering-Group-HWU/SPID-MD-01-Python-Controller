@@ -34,7 +34,7 @@ class GuiApp(QtWidgets.QWidget):
 		print(f"Screen resolution: {screen_size.width()}x{screen_size.height()}")
 		width = screen_size.width() * 0.5  # 50% of screen width
 		height = screen_size.height() * 0.5  # 50% of screen height
-		self.resize(width, height)
+		self.resize(int(width), int(height))
 		
 		layout = QtWidgets.QVBoxLayout()
 
